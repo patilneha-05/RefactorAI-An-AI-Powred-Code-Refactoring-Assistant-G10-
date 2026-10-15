@@ -1,0 +1,10 @@
+/* RefactorAI global stylesheet — order matters: tokens first. */
+@import './styles/variables.css';
+@import './styles/global.css';
+@import './styles/layout.css';
+@import './styles/components.css';
+@import './styles/pages.css';
+@import './styles/launcher.css';
+@import './styles/context-dialog.css';
+@import './styles/workspace.css';
+@import './styles/settings.css';

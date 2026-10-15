@@ -1,0 +1,477 @@
+/* ==========================================================================
+   Settings screen (pages/Settings.jsx)
+   A scoped translation of the supplied Settings design. Every class is
+   prefixed `stg-` so the design's generic names (.layout, .sidebar, .field,
+   .notice, .switch …) cannot collide with the app's own stylesheets.
+   ========================================================================== */
+
+.stg-screen {
+  --stg-background: #0b0d10;
+  --stg-header: #111317;
+  --stg-sidebar: #111419;
+  --stg-card: #111419;
+  --stg-border: #20252b;
+  --stg-text: #d4d6dc;
+  --stg-muted: #777d87;
+  --stg-accent: #ffb52e;
+  --stg-switch-off: #080a0d;
+  --stg-switch-thumb: #343a42;
+
+  flex: 1 0 auto;
+  min-height: calc(100vh - var(--topbar-h));
+  width: 100%;
+  background: var(--stg-background);
+  color: var(--stg-text);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+}
+
+/* ========================= TOP HEADER ========================= */
+
+.stg-header {
+  height: 46px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background: var(--stg-header);
+  border-bottom: 1px solid #20242a;
+}
+
+.stg-header-left {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.stg-brand {
+  color: #d4d6dc;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 5px;
+  white-space: nowrap;
+}
+
+.stg-header-divider {
+  height: 22px;
+  width: 1px;
+  margin: 0 21px;
+  background: #252a30;
+}
+
+.stg-header-section {
+  color: #777d87;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 3px;
+}
+
+.stg-launcher-link {
+  color: #777d87;
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  transition: color 150ms ease;
+}
+
+.stg-launcher-link:hover {
+  color: var(--stg-accent);
+  text-decoration: none;
+}
+
+/* ========================= MAIN LAYOUT ========================= */
+
+.stg-layout {
+  display: grid;
+  grid-template-columns: 268px minmax(0, 1fr);
+  min-height: calc(100vh - var(--topbar-h) - 46px);
+}
+
+/* ========================= LEFT SIDEBAR ========================= */
+
+.stg-sidebar {
+  min-height: calc(100vh - var(--topbar-h) - 46px);
+  background: var(--stg-sidebar);
+  border-right: 1px solid #252a30;
+  padding-top: 19px;
+}
+
+.stg-nav-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.stg-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 46px;
+  padding: 0 22px;
+  border: none;
+  border-left: 3px solid transparent;
+  background: transparent;
+  color: #777d87;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 1.1px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 150ms ease, background 150ms ease;
+}
+
+.stg-nav-item:hover {
+  color: #c4c7ce;
+  background: #14181d;
+}
+
+.stg-nav-item.active {
+  color: #d0d2d7;
+  background: #0d1013;
+  border-left-color: var(--stg-accent);
+}
+
+/* ========================= MAIN CONTENT ========================= */
+
+.stg-main {
+  min-width: 0;
+  padding: 29px 29px 40px;
+  background: var(--stg-background);
+}
+
+.stg-inner {
+  width: 100%;
+  max-width: 1000px;
+}
+
+.stg-page-title {
+  margin-bottom: 7px;
+  color: #d7d9df;
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: 3px;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.stg-page-description {
+  color: #858b95;
+  font-size: 16px;
+  line-height: 1.55;
+  margin-bottom: 17px;
+  max-width: 1000px;
+}
+
+/* ========================= AGENT CARDS ========================= */
+
+.stg-agent-list {
+  width: 100%;
+  max-width: 807px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.stg-agent-card {
+  min-height: 74px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 20px;
+  background: var(--stg-card);
+  border: 1px solid #20252b;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.stg-agent-card:hover {
+  border-color: #30363e;
+  background: #13171c;
+}
+
+.stg-agent-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.stg-agent-name {
+  color: #c9cbd1;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: normal;
+  text-transform: none;
+  margin-bottom: 2px;
+  overflow-wrap: anywhere;
+}
+
+.stg-agent-description {
+  color: #858b95;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.stg-agent-note {
+  margin-top: 6px;
+  color: #626771;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Disabled agents use subdued text like the screenshot. */
+.stg-agent-card:not(.enabled) .stg-agent-name {
+  color: #626771;
+}
+
+.stg-agent-card:not(.enabled) .stg-agent-description {
+  color: #494e57;
+}
+
+/* ========================= CUSTOM RECTANGULAR SWITCH ========================= */
+
+.stg-switch {
+  position: relative;
+  display: inline-block;
+  width: 47px;
+  min-width: 47px;
+  height: 23px;
+  flex-shrink: 0;
+}
+
+.stg-switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.stg-switch-track {
+  position: absolute;
+  inset: 0;
+  background: var(--stg-switch-off);
+  border: 1px solid #252a31;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.stg-switch-track::before {
+  content: "";
+  position: absolute;
+  width: 17px;
+  height: 17px;
+  left: 3px;
+  top: 2px;
+  background: var(--stg-switch-thumb);
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.stg-switch input:checked + .stg-switch-track {
+  background: var(--stg-accent);
+  border-color: var(--stg-accent);
+}
+
+.stg-switch input:checked + .stg-switch-track::before {
+  background: #111317;
+  transform: translateX(23px);
+}
+
+.stg-switch input:focus-visible + .stg-switch-track {
+  outline: 2px solid #f4d28c;
+  outline-offset: 3px;
+}
+
+.stg-switch input:disabled + .stg-switch-track {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* ========================= OTHER SECTIONS ========================= */
+
+.stg-section {
+  display: block;
+  max-width: 807px;
+}
+
+.stg-secondary-card {
+  border: 1px solid var(--stg-border);
+  background: var(--stg-card);
+  padding: 20px;
+  margin-top: 10px;
+}
+
+.stg-secondary-card h2 {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+.stg-secondary-card p {
+  color: var(--stg-muted);
+  line-height: 1.6;
+}
+
+.stg-field {
+  margin-top: 18px;
+}
+
+.stg-field label {
+  display: block;
+  margin-bottom: 9px;
+  color: var(--stg-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.stg-field input {
+  width: 100%;
+  max-width: 500px;
+  height: 42px;
+  padding: 0 12px;
+  background: #0b0d10;
+  border: 1px solid var(--stg-border);
+  color: var(--stg-text);
+  font-size: 14px;
+}
+
+.stg-field input:focus {
+  outline: none;
+  border-color: var(--stg-accent);
+}
+
+.stg-save-button {
+  margin-top: 18px;
+  min-height: 42px;
+  padding: 0 20px;
+  background: var(--stg-accent);
+  border: 1px solid var(--stg-accent);
+  color: #17130b;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+}
+
+.stg-save-button:hover {
+  background: #ffc45b;
+}
+
+.stg-notice {
+  margin-top: 12px;
+  color: #858b95;
+  font-size: 13px;
+  line-height: 1.5;
+  min-height: 18px;
+}
+
+/* ========================= RESPONSIVE ========================= */
+
+@media (max-width: 900px) {
+  .stg-main {
+    padding: 25px 22px;
+  }
+
+  .stg-layout {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .stg-page-description {
+    font-size: 14px;
+  }
+
+  .stg-agent-list {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .stg-header {
+    padding: 0 13px;
+  }
+
+  .stg-brand {
+    font-size: 12px;
+    letter-spacing: 3px;
+  }
+
+  .stg-header-divider {
+    margin: 0 10px;
+  }
+
+  .stg-header-section {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+  }
+
+  .stg-launcher-link {
+    font-size: 9px;
+    letter-spacing: 0;
+  }
+
+  .stg-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .stg-sidebar {
+    min-height: auto;
+    padding: 0;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--stg-border);
+  }
+
+  .stg-nav-list {
+    flex-direction: row;
+    width: max-content;
+  }
+
+  .stg-nav-item {
+    min-height: 42px;
+    width: auto;
+    padding: 0 12px;
+    font-size: 10px;
+    border-left: 0;
+    border-bottom: 2px solid transparent;
+  }
+
+  .stg-nav-item.active {
+    border-bottom-color: var(--stg-accent);
+  }
+
+  .stg-main {
+    padding: 25px 16px;
+  }
+
+  .stg-page-title {
+    font-size: 15px;
+  }
+
+  .stg-page-description {
+    font-size: 13px;
+  }
+
+  .stg-agent-card {
+    padding: 13px;
+    gap: 10px;
+  }
+
+  .stg-agent-name {
+    font-size: 12px;
+  }
+
+  .stg-agent-description {
+    font-size: 12px;
+  }
+}

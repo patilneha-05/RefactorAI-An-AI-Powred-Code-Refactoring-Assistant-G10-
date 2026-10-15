@@ -1,0 +1,339 @@
+/* ==========================================================================
+   App shell: top navigation bar + main content
+   ========================================================================== */
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ------------------------------------------------------------------ Topbar */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-topbar);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  height: var(--topbar-h);
+  padding: 0 var(--page-pad);
+  background: rgba(9, 11, 14, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar__brand {
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.topbar__brand:hover {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.topbar__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.topbar__nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color var(--transition), background var(--transition);
+}
+
+.topbar__nav-link:hover {
+  color: var(--text);
+  background: var(--panel-alt);
+  text-decoration: none;
+}
+
+.topbar__nav-link.active {
+  color: var(--accent);
+}
+
+.topbar__nav-badge {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.topbar__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* -------------------------------------------------------- Project selector */
+
+.project-selector {
+  position: relative;
+}
+
+.project-selector__button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 320px;
+  height: 38px;
+  padding: 0 var(--space-3);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-body);
+  font-size: var(--fs-sm);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.project-selector__button:hover {
+  border-color: var(--border-strong);
+}
+
+.project-selector__label {
+  min-width: 0;
+  text-align: left;
+  line-height: 1.15;
+}
+
+.project-selector__label strong {
+  display: block;
+  color: var(--text);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-selector__label span {
+  display: block;
+  font-size: 11px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+}
+
+.project-selector__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: var(--z-dropdown);
+  min-width: 290px;
+  max-width: 340px;
+  padding: var(--space-2);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+.project-selector__menu-label {
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.project-selector__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  font-size: var(--fs-sm);
+  color: var(--text-body);
+}
+
+.project-selector__item:hover {
+  background: var(--bg-subtle);
+}
+
+.project-selector__item.active {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.project-selector__item-meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.project-selector__item-meta strong {
+  display: block;
+  color: inherit;
+  font-weight: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-selector__item-meta span {
+  display: block;
+  font-size: 11px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-selector__menu-divider {
+  height: 1px;
+  margin: var(--space-2) 0;
+  background: var(--border);
+}
+
+/* ------------------------------------------------------------- Status pill */
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 30px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+button.status-pill {
+  transition: border-color var(--transition), background var(--transition);
+}
+
+button.status-pill:hover {
+  border-color: var(--border-strong);
+  background: var(--panel-alt);
+}
+
+.status-pill__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+.status-pill--online .status-pill__dot {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.status-pill--offline .status-pill__dot {
+  background: var(--danger);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+.status-pill--checking .status-pill__dot {
+  background: var(--warning);
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ----------------------------------------------------------- Content area */
+
+.app-content {
+  flex: 1;
+  padding: var(--page-pad);
+  min-width: 0;
+}
+
+/* Full-bleed screens (Workspace, Settings) draw their own chrome and fill the
+   remaining viewport below the topbar, so the shell adds no padding. */
+.app-content--flush {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    padding: 0 var(--space-4);
+    gap: var(--space-3);
+  }
+
+  .app-content {
+    padding: var(--space-4);
+  }
+
+  :root {
+    --page-pad: var(--space-4);
+  }
+}
+
+@media (max-width: 640px) {
+  .topbar__brand {
+    letter-spacing: 2px;
+  }
+
+  .topbar__nav {
+    gap: 0;
+  }
+
+  .topbar__nav-link {
+    padding: 8px;
+  }
+
+  .project-selector__button {
+    max-width: 150px;
+  }
+
+  .status-pill__text {
+    display: none;
+  }
+
+  .status-pill {
+    padding: 0 8px;
+  }
+}

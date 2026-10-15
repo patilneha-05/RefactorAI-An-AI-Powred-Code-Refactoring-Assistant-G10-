@@ -1,0 +1,1333 @@
+/* ==========================================================================
+   Workspace / Code Editor — the supplied design, translated verbatim.
+
+   The supplied stylesheet targets very generic selectors (`body`, `html`,
+   `*`, `.app`, `.topbar`, `.workspace`, `.explorer`, `.tab`, `.terminal`,
+   `.history`, `.badge`, `.statusbar`, …) that would collide with the app
+   shell's global rules (layout.css / components.css / pages.css). Every
+   selector is therefore renamed with a `ws-` prefix and rooted at `.ws-screen`
+   (the design's `body`/`.app` equivalent). Declarations are otherwise
+   unchanged.
+
+   The design's `* { margin: 0; padding: 0 }` baseline and `button { font: inherit }`
+   reset are written with `:where(.ws-screen)` so they keep the lowest possible
+   specificity: they still beat the browser defaults (which is their job — e.g.
+   stripping the user-agent padding on `<button>`) but any app component style
+   such as `.btn` / `.modal__body` continues to win where both apply.
+
+   Rules marked "ADDED" are not in the static mock — they cover live-data
+   affordances (menus, agent picker, empty/loading states) and are styled with
+   the same design tokens.
+   ========================================================================== */
+
+.ws-screen {
+  --bg: #0b0d10;
+  --panel: #101317;
+  --panel2: #12161b;
+  --border: #252a31;
+  --text: #d5d7dc;
+  --muted: #777e89;
+  --accent: #ffb52e;
+  --green: #54d6b0;
+  --cyan: #51c8c0;
+  --mono: "Courier New", monospace;
+
+  /* Gutter width shared by the line-number column and the editable overlay. */
+  --ws-gutter: 65px;
+
+  /* Standalone screen — the workspace's own ws-topbar is its navigation bar. */
+  height: 100dvh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Baseline reset — lowest specificity (see header). */
+:where(.ws-screen) *,
+:where(.ws-screen) *::before,
+:where(.ws-screen) *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:where(.ws-screen) button {
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+:where(.ws-screen) button:disabled {
+  cursor: not-allowed;
+}
+
+.ws-screen button:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* ============================================================== TOP MENU */
+
+/* The bar is shared by every screen (not only `.ws-screen`), so it carries its
+   own design tokens and baseline reset. */
+.ws-topbar {
+  --bg: #0b0d10;
+  --panel: #101317;
+  --panel2: #12161b;
+  --border: #252a31;
+  --text: #d5d7dc;
+  --muted: #777e89;
+  --accent: #ffb52e;
+  --green: #54d6b0;
+  --cyan: #51c8c0;
+  --mono: "Courier New", monospace;
+
+  position: sticky;
+  top: 0;
+  z-index: var(--z-topbar);
+  height: 36px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 15px;
+  background: #111419;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Baseline reset for the bar on screens outside `.ws-screen` — lowest
+   specificity, so the component rules below still win. */
+:where(.ws-topbar) *,
+:where(.ws-topbar) *::before,
+:where(.ws-topbar) *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:where(.ws-topbar) button {
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+:where(.ws-topbar) a {
+  text-decoration: none;
+}
+
+/* Brand — REFACTORAI wordmark, links back to the dashboard. */
+.ws-brand {
+  color: #d7d8dc;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  white-space: nowrap;
+}
+
+.ws-brand:hover {
+  color: var(--accent);
+}
+
+.ws-menu-left,
+.ws-menu-right {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.ws-menu-item {
+  color: #818793;
+  border: 0;
+  background: none;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.ws-menu-item:hover,
+.ws-menu-item[aria-expanded="true"] {
+  color: var(--text);
+}
+
+.ws-project-title {
+  font-size: 13px;
+  color: #d7d9df;
+  letter-spacing: 0.4px;
+}
+
+.ws-git-badge {
+  border: 1px solid #303640;
+  padding: 6px 9px;
+  color: #777e89;
+  font-size: 11px;
+}
+
+/* ---- ADDED: menubar dropdown panels ---- */
+
+.ws-menu {
+  position: relative;
+}
+
+.ws-menu-panel {
+  position: absolute;
+  top: calc(100% + 9px);
+  left: 0;
+  z-index: 40;
+  min-width: 250px;
+  padding: 6px;
+  background: #111419;
+  border: 1px solid #303640;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+}
+
+.ws-menu-panel--right {
+  left: auto;
+  right: 0;
+}
+
+.ws-menu-label {
+  padding: 7px 10px 5px;
+  color: #777e89;
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+
+.ws-menu-sep {
+  height: 1px;
+  margin: 5px 0;
+  background: var(--border);
+}
+
+.ws-dd-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 10px;
+  background: none;
+  border: 0;
+  text-align: left;
+  color: #c7cbd2;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.ws-dd-item:hover:not(:disabled) {
+  background: #1b2027;
+  color: #f0f0f2;
+}
+
+.ws-dd-item:disabled {
+  color: #5f6672;
+}
+
+.ws-dd-item__meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.ws-dd-item__meta strong {
+  display: block;
+  color: inherit;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ws-dd-item__meta span {
+  display: block;
+  margin-top: 2px;
+  color: #777e89;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ws-dd-item__hint {
+  margin-left: auto;
+  color: #777e89;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.ws-dd-item__check {
+  color: var(--accent);
+}
+
+/* ========================================================= MAIN WORKSPACE */
+
+.ws-workspace {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+
+  /* Pane widths, driven by the drag handles (persisted in the browser). */
+  --ws-left: 260px;
+  --ws-right: 340px;
+}
+
+/* ---------------------------------------------------- pane drag handles */
+
+.ws-resizer {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+  background: transparent;
+  touch-action: none;
+}
+
+.ws-resizer::before {
+  content: "";
+  position: absolute;
+  background: var(--border);
+  transition:
+    background 0.12s ease,
+    width 0.12s ease,
+    height 0.12s ease;
+}
+
+/* Vertical handle — between the explorer / editor / suggestions columns. */
+.ws-resizer--v {
+  width: 7px;
+  cursor: col-resize;
+}
+
+.ws-resizer--v::before {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+}
+
+/* Horizontal handle — between the editor and the terminal. */
+.ws-resizer--h {
+  height: 7px;
+  cursor: row-resize;
+}
+
+.ws-resizer--h::before {
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  transform: translateY(-50%);
+}
+
+.ws-resizer:hover::before,
+.ws-resizer:focus-visible::before,
+.ws-resizer--active::before {
+  background: var(--accent);
+}
+
+.ws-resizer--v:hover::before,
+.ws-resizer--v:focus-visible::before,
+.ws-resizer--v.ws-resizer--active::before {
+  width: 2px;
+}
+
+.ws-resizer--h:hover::before,
+.ws-resizer--h:focus-visible::before,
+.ws-resizer--h.ws-resizer--active::before {
+  height: 2px;
+}
+
+.ws-resizer:focus-visible {
+  outline: none;
+}
+
+/* ============================================================== EXPLORER */
+
+.ws-explorer {
+  flex: 0 0 auto;
+  width: var(--ws-left);
+  min-width: 0;
+  overflow: auto;
+  background: #101317;
+}
+
+.ws-panel-heading {
+  height: 43px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 15px;
+  color: #777e89;
+  font-size: 12px;
+  letter-spacing: 2.5px;
+  border-bottom: 1px solid #1d2229;
+}
+
+.ws-panel-action {
+  color: #7b828d;
+  border: none;
+  background: none;
+}
+
+.ws-panel-action:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.ws-panel-action:disabled {
+  opacity: 0.5;
+}
+
+.ws-tree {
+  padding-top: 10px;
+  padding-bottom: 15px;
+}
+
+.ws-row {
+  width: 100%;
+  height: 29px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: #c7cbd2;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.ws-row:hover {
+  background: #171b21;
+}
+
+.ws-row.selected {
+  background: #1b2027;
+  border-left: 3px solid var(--accent);
+  padding-left: 7px;
+  color: #f0f0f2;
+}
+
+.ws-row.folder {
+  color: #d1d4da;
+}
+
+.ws-row.indent-1 {
+  padding-left: 25px;
+}
+
+.ws-row.indent-2 {
+  padding-left: 42px;
+}
+
+.ws-row.indent-3 {
+  padding-left: 58px;
+}
+
+.ws-arrow {
+  color: #9299a3;
+  width: 9px;
+  flex-shrink: 0;
+  font-size: 10px;
+}
+
+.ws-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #7d8794;
+  flex-shrink: 0;
+}
+
+.ws-dot.py {
+  background: #59c8bd;
+}
+
+.ws-dot.json {
+  background: #ffb52e;
+}
+
+.ws-dot.csv {
+  background: #a3a9b3;
+}
+
+.ws-dot.txt {
+  background: #8e96a3;
+}
+
+.ws-dot.md {
+  background: #818995;
+}
+
+/* ADDED: dot colours for the extensions the design's mock never showed. */
+.ws-dot.js,
+.ws-dot.jsx,
+.ws-dot.ts,
+.ws-dot.tsx,
+.ws-dot.css {
+  background: #6fb2e2;
+}
+
+.ws-dot.html {
+  background: #e07b54;
+}
+
+.ws-dot.sh,
+.ws-dot.yaml,
+.ws-dot.yml {
+  background: #9fb37a;
+}
+
+.ws-dot.sql {
+  background: #c9a86a;
+}
+
+.ws-tree-empty {
+  padding: 14px 15px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ========================================================= CENTER EDITOR */
+
+.ws-center {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.ws-editor-top {
+  position: relative;
+  height: 43px;
+  min-height: 43px;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  background: #101317;
+  border-bottom: 1px solid var(--border);
+}
+
+.ws-tabs {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.ws-tab {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 0 15px;
+  border-right: 1px solid var(--border);
+  background: #0b0d10;
+  color: #e0e1e5;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.ws-tab-name {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.ws-tab-name::after {
+  content: "";
+  position: absolute;
+  height: 2px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--accent);
+}
+
+.ws-tab-close {
+  color: #818793;
+  background: none;
+  border: 0;
+}
+
+.ws-tab-close:hover {
+  color: var(--text);
+}
+
+.ws-refactor-btn {
+  position: relative;
+  align-self: center;
+  margin-right: 10px;
+  padding: 9px 14px;
+  color: #17130b;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.ws-refactor-btn:hover:not(:disabled) {
+  background: #ffc65b;
+}
+
+.ws-refactor-btn:disabled {
+  opacity: 0.5;
+}
+
+.ws-editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.ws-save-btn {
+  padding: 8px 13px;
+  background: transparent;
+  border: 1px solid #3a4149;
+  color: #aeb4bd;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.ws-save-btn:hover:not(:disabled) {
+  border-color: #4a525c;
+  color: #f0f0f2;
+}
+
+.ws-save-btn--dirty {
+  color: var(--accent);
+  border-color: #7a5a1f;
+}
+
+.ws-save-btn:disabled {
+  opacity: 0.4;
+}
+
+.ws-tab-dirty {
+  margin-left: 5px;
+  color: var(--accent);
+  font-size: 11px;
+  line-height: 1;
+}
+
+/* ============================================================= CODE AREA */
+
+.ws-code-area {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  overflow: hidden;
+  background: #0b0d10;
+}
+
+.ws-code-content {
+  min-width: 0;
+  flex: 1;
+  padding-top: 8px;
+  overflow: auto;
+  scrollbar-color: #343a43 #0b0d10;
+}
+
+/* ------------------------------------------------ editable code surface
+
+   The highlighted lines are painted as usual, then a transparent <textarea>
+   is layered on top so typing is real text input while the syntax colours
+   come from the layer underneath. Both layers share the exact same font,
+   line-height and padding so the caret lines up with the visible glyphs. */
+
+.ws-code-editor {
+  position: relative;
+  min-width: max-content;
+  min-height: 100%;
+}
+
+.ws-code-highlight {
+  position: relative;
+  min-width: max-content;
+  pointer-events: none;
+}
+
+.ws-code-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0 15px 0 var(--ws-gutter);
+  border: 0;
+  outline: 0;
+  resize: none;
+  background: transparent;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  caret-color: #e6e7ea;
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 24px;
+  letter-spacing: normal;
+  white-space: pre;
+  overflow: hidden;
+  tab-size: 4;
+}
+
+.ws-code-input::selection {
+  background: rgba(255, 181, 46, 0.25);
+}
+
+.ws-code-input:focus {
+  outline: none;
+}
+
+.ws-code-line {
+  min-width: max-content;
+  display: flex;
+  align-items: baseline;
+  height: 24px;
+  line-height: 24px;
+  white-space: pre;
+  padding-right: 15px;
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+.ws-code-line.active-line {
+  background: #101419;
+}
+
+/* Lines a pending suggestion points at — marked red until it is resolved. */
+.ws-code-line--flag {
+  background: rgba(226, 74, 60, 0.13);
+  box-shadow: inset 3px 0 0 #e24a3c;
+}
+
+.ws-lineno {
+  width: var(--ws-gutter);
+  min-width: var(--ws-gutter);
+  padding-right: 16px;
+  text-align: right;
+  color: #707783;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.ws-lineno.current {
+  color: var(--accent);
+}
+
+.ws-code-line--flag .ws-lineno,
+.ws-code-line--flag .ws-lineno.current {
+  color: #ff8b7d;
+}
+
+.ws-code-text {
+  color: #d4d5da;
+}
+
+.ws-code-text .kw {
+  color: #e4a448;
+}
+
+.ws-code-text .mod {
+  color: #e8ad58;
+}
+
+.ws-code-text .str {
+  color: #55c7bd;
+}
+
+.ws-code-text .num {
+  color: #b7d5a0;
+}
+
+.ws-code-text .fn {
+  color: #e4e5e9;
+}
+
+.ws-code-text .comment {
+  color: #747d88;
+}
+
+.ws-code-text .const {
+  color: #e7b05d;
+}
+
+.ws-code-text .op {
+  color: #c9cdd4;
+}
+
+/* ADDED: code-pane placeholders (no project / no file / loading / error). */
+.ws-code-state {
+  padding: 18px 16px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.ws-code-state--error {
+  color: #ff8585;
+}
+
+.ws-code-state-actions {
+  display: flex;
+  gap: 9px;
+  margin-top: 13px;
+}
+
+.ws-btn {
+  padding: 9px 14px;
+  background: transparent;
+  border: 1px solid #303640;
+  color: #aeb4bd;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.ws-btn:hover:not(:disabled) {
+  border-color: #4a525c;
+  color: #f0f0f2;
+}
+
+.ws-btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #17130b;
+  font-weight: bold;
+}
+
+.ws-btn--primary:hover:not(:disabled) {
+  background: #ffc65b;
+  color: #17130b;
+}
+
+.ws-btn:disabled {
+  opacity: 0.5;
+}
+
+/* ---- Minimap ---- */
+
+.ws-minimap {
+  width: 53px;
+  min-width: 53px;
+  padding: 5px 5px;
+  border-left: 1px solid #171b21;
+  background: #0c0f12;
+  overflow: hidden;
+  opacity: 0.8;
+}
+
+.ws-mini {
+  height: 3px;
+  margin-bottom: 2px;
+  background: #555f6b;
+  opacity: 0.7;
+}
+
+.ws-mini:nth-child(3n) {
+  background: #bb8c43;
+}
+
+.ws-mini:nth-child(4n) {
+  background: #448f8b;
+}
+
+.ws-mini:nth-child(5n) {
+  background: #727b8c;
+}
+
+.ws-mini:nth-child(7n) {
+  width: 55%;
+}
+
+.ws-mini:nth-child(3n + 1) {
+  width: 82%;
+}
+
+/* ============================================================== TERMINAL */
+
+.ws-terminal {
+  flex: 0 0 auto;
+  height: var(--ws-term-height, 210px);
+  min-height: 90px;
+  display: flex;
+  flex-direction: column;
+  background: #0b0d10;
+}
+
+/* ADDED: the □ tool maximizes the terminal (the editor keeps a 38% strip). */
+.ws-terminal--max {
+  flex: 1 1 auto;
+  height: auto;
+  max-height: none;
+  border-top: 1px solid var(--border);
+}
+
+.ws-center--term-max .ws-code-area {
+  flex: 0 0 auto;
+  height: 38%;
+}
+
+.ws-term-head {
+  height: 32px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 13px;
+  background: #111419;
+  border-bottom: 1px solid var(--border);
+}
+
+.ws-term-title {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  color: #d5d7dc;
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+
+.ws-term-title::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 37px;
+  height: 2px;
+  background: var(--accent);
+}
+
+.ws-term-tools {
+  color: #7d8590;
+  display: flex;
+  gap: 14px;
+}
+
+.ws-term-tools button {
+  background: none;
+  border: 0;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.ws-term-tools button:hover {
+  color: var(--text);
+}
+
+.ws-term-body {
+  flex: 1;
+  min-height: 0;
+  padding: 10px 8px;
+  overflow: auto;
+  color: #c1c5cc;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ws-term-path {
+  overflow-wrap: anywhere;
+  margin-bottom: 7px;
+}
+
+/* ADDED: live log of read/refactor activity. */
+.ws-term-log {
+  margin-bottom: 7px;
+}
+
+.ws-term-log-line {
+  overflow-wrap: anywhere;
+}
+
+.ws-term-log-line--ok {
+  color: #54d6b0;
+}
+
+.ws-term-log-line--error {
+  color: #ff8585;
+}
+
+.ws-term-log-line--muted {
+  color: var(--muted);
+}
+
+.ws-term-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ws-prompt-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #45c4ba;
+  white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ws-prompt-caret {
+  color: #4cbec5;
+}
+
+.ws-prompt-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ws-backend-pill {
+  color: #49c7a7;
+  white-space: nowrap;
+}
+
+.ws-backend-pill--offline {
+  color: #ff8585;
+}
+
+.ws-backend-pill--checking {
+  color: #d9a74b;
+}
+
+/* ====================================================== RIGHT HISTORY */
+
+.ws-history {
+  flex: 0 0 auto;
+  width: var(--ws-right);
+  min-width: 0;
+  overflow: auto;
+  background: #101317;
+}
+
+.ws-hist-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: 43px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 15px;
+  background: #101317;
+  border-bottom: 1px solid var(--border);
+  color: #777e89;
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+
+.ws-hist-body {
+  padding: 10px 12px;
+}
+
+.ws-hist-empty {
+  padding: 6px 2px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.ws-session {
+  margin-bottom: 10px;
+}
+
+.ws-session-head {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 7px 0;
+  text-align: left;
+  border: 0;
+  background: none;
+  color: #c9ccd2;
+}
+
+.ws-session-arrow {
+  color: var(--accent);
+  font-size: 13px;
+  margin-top: 1px;
+}
+
+.ws-session-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.ws-session-file {
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+
+.ws-session-date {
+  color: #777e89;
+  font-size: 10px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.ws-session-stats {
+  color: #777e89;
+  font-size: 10px;
+  margin-top: 3px;
+}
+
+.ws-session-stats .ok {
+  color: #a5c5b4;
+}
+
+.ws-session-stats .pending {
+  color: #b7bdc6;
+}
+
+.ws-session-tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+/* ---- Priority (severity) ---- */
+
+.ws-priority {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border: 1px solid;
+  font-size: 9px;
+  line-height: 1.2;
+}
+
+.ws-priority.high {
+  color: #ff8b7d;
+  border-color: #9e4b45;
+  background: rgba(226, 74, 60, 0.1);
+}
+
+.ws-priority.medium {
+  color: #e0b25a;
+  border-color: #8a6d33;
+  background: rgba(224, 178, 90, 0.1);
+}
+
+.ws-priority.low {
+  color: #86c7b6;
+  border-color: #3f6f66;
+  background: rgba(134, 199, 182, 0.08);
+}
+
+.ws-priority.unknown {
+  color: #8b909a;
+  border-color: #41474f;
+}
+
+/* ---- Findings ---- */
+
+.ws-finding {
+  margin: 0 0 8px;
+  padding: 10px;
+  border: 1px solid #252b32;
+  background: #0c0f12;
+  cursor: pointer;
+}
+
+.ws-finding-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 7px;
+  margin-bottom: 8px;
+}
+
+.ws-finding-title {
+  color: #d1d3d8;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.ws-finding-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  color: #7d8490;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.ws-badge {
+  flex-shrink: 0;
+  padding: 4px 6px;
+  border: 1px solid;
+  font-size: 9px;
+  line-height: 1.2;
+}
+
+.ws-badge.accepted {
+  color: #64cbb7;
+  border-color: #499a8d;
+}
+
+.ws-badge.pending {
+  color: #d4a84f;
+  border-color: #9e7836;
+}
+
+/* ADDED: the design only styles accepted/pending; rejected reuses the palette. */
+.ws-badge.rejected {
+  color: #8b909a;
+  border-color: #41474f;
+}
+
+.ws-finding:hover {
+  border-color: #444b55;
+}
+
+/* ========================================================= BOTTOM STATUS */
+
+.ws-statusbar {
+  height: 27px;
+  min-height: 27px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 15px;
+  background: #101317;
+  border-top: 1px solid var(--border);
+  color: #858b95;
+  font-size: 10px;
+}
+
+.ws-status-left,
+.ws-status-right {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.ws-status-dot {
+  width: 6px;
+  height: 6px;
+  display: inline-block;
+  background: var(--green);
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+.ws-status-dot--offline {
+  background: #ff7777;
+}
+
+.ws-status-dot--checking {
+  background: #ffb52e;
+}
+
+.ws-status-amber {
+  color: #d9a74b;
+}
+
+/* ========================================================== RESPONSIVE */
+
+@media (max-width: 1100px) {
+  /* Below this width the side panes fall back to the design's fixed sizes and
+     the drag handles are hidden, so a static divider is restored. */
+  .ws-screen {
+    --ws-gutter: 48px;
+  }
+
+  .ws-explorer {
+    width: 190px;
+    border-right: 1px solid var(--border);
+  }
+
+  .ws-history {
+    display: none;
+  }
+
+  .ws-resizer {
+    display: none;
+  }
+}
+
+@media (max-width: 650px) {
+  .ws-topbar {
+    padding: 0 8px;
+  }
+
+  .ws-menu-left {
+    gap: 10px;
+  }
+
+  .ws-menu-item {
+    font-size: 10px;
+  }
+
+  .ws-project-title {
+    font-size: 11px;
+  }
+
+  .ws-explorer {
+    width: 135px;
+  }
+
+  .ws-row {
+    font-size: 11px;
+    padding-left: 7px;
+  }
+
+  .ws-row.indent-1 {
+    padding-left: 17px;
+  }
+
+  .ws-minimap {
+    display: none;
+  }
+
+  .ws-screen {
+    --ws-gutter: 38px;
+  }
+
+  .ws-code-line,
+  .ws-code-input {
+    font-size: 12px;
+  }
+
+  .ws-lineno {
+    padding-right: 10px;
+  }
+
+  .ws-refactor-btn {
+    padding: 8px;
+    font-size: 10px;
+  }
+
+  .ws-statusbar {
+    padding: 0 7px;
+    font-size: 9px;
+  }
+
+  .ws-status-left,
+  .ws-status-right {
+    gap: 6px;
+  }
+}

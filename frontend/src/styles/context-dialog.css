@@ -1,0 +1,178 @@
+/* ==========================================================================
+   Project context builder dialog (ProjectContextDialog.jsx)
+   Scoped under `.pctx` so it can layer on top of the shared Modal styles
+   without leaking into other screens.
+   ========================================================================== */
+
+.pctx {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.pctx__lead {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+}
+
+/* ---- Inline error (validation or backend failure) ---- */
+.pctx__alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 10px 12px;
+  border: 1px solid var(--danger-soft-border);
+  border-left: 3px solid var(--danger);
+  background: var(--danger-soft);
+  color: var(--diff-del-text);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+}
+
+.pctx__alert svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* "Auto-detected from the folder" note shown above the review. */
+.pctx__detected {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--accent);
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-base);
+}
+
+/* ---- Edit mode ---- */
+.pctx__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ---- Review mode ---- */
+.pctx__review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.pctx-group {
+  border: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+
+.pctx-group__title {
+  margin: 0;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-alt);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.pctx-group__list {
+  margin: 0;
+}
+
+.pctx-row {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: var(--space-3);
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.pctx-group__list .pctx-row:last-child {
+  border-bottom: 0;
+}
+
+.pctx-row dt {
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding-top: 2px;
+}
+
+.pctx-row dd {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+  word-break: break-word;
+}
+
+.pctx-mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+.pctx-empty {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.pctx-group__hint {
+  margin: 0;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-base);
+}
+
+.pctx-group__hint strong {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+/* Exact payload that is stored and injected into every agent prompt. */
+.pctx-preview {
+  border-top: 1px solid var(--border);
+}
+
+.pctx-preview__head {
+  padding: 8px 14px 0;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.pctx-preview__body {
+  margin: 6px 14px 12px;
+  padding: 10px 12px;
+  max-height: 200px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 640px) {
+  .pctx-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .pctx-row dt {
+    padding-top: 0;
+  }
+}

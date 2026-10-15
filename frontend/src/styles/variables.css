@@ -1,0 +1,118 @@
+/* ==========================================================================
+   RefactorAI design tokens
+   Single source of truth for colors, spacing, typography, shadows and radii.
+
+   Theme: dark, technical, amber-accented (matches the launcher/editor spec).
+     background #090b0e · panel #111419 · border #252a31 · accent #ffb52e
+     text #e5e7eb · muted #858b96 · success #54d6b0
+   ========================================================================== */
+
+:root {
+  /* ---- Surfaces & backgrounds ---- */
+  --bg: #090b0e;
+  --bg-subtle: #0d1013;
+  --panel: #111419;
+  --panel-alt: #171b21;
+  --panel-hover: #171b21;
+  --sidebar-bg: #0b0d11;
+  --sidebar-bg-gradient: linear-gradient(180deg, #0e1014 0%, #090b0e 100%);
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-text: #858b96;
+  --sidebar-text-active: #e5e7eb;
+  --sidebar-hover: rgba(255, 255, 255, 0.05);
+
+  /* ---- Accent (amber) ---- */
+  --accent: #ffb52e;
+  --accent-strong: #ffc45b;
+  --accent-soft: rgba(255, 181, 46, 0.1);
+  --accent-soft-border: rgba(255, 181, 46, 0.32);
+  --accent-text: #ffb52e;
+  --accent-ring: rgba(255, 181, 46, 0.35);
+  --accent-contrast: #17130b;
+
+  /* ---- Semantic colors ---- */
+  --danger: #ff7777;
+  --danger-strong: #ff5c5c;
+  --danger-soft: rgba(255, 119, 119, 0.1);
+  --danger-soft-border: rgba(255, 119, 119, 0.3);
+  --warning: #ffb52e;
+  --warning-soft: rgba(255, 181, 46, 0.1);
+  --warning-soft-border: rgba(255, 181, 46, 0.3);
+  --info: #6aa9ff;
+  --info-soft: rgba(106, 169, 255, 0.1);
+  --info-soft-border: rgba(106, 169, 255, 0.3);
+  --success: #54d6b0;
+  --success-soft: rgba(84, 214, 176, 0.1);
+
+  /* ---- Text ---- */
+  --text: #e5e7eb;
+  --text-body: #b7bcc4;
+  --text-muted: #858b96;
+  --text-faint: #5f6672;
+  --text-inverse: #17130b;
+
+  /* ---- Borders ---- */
+  --border: #252a31;
+  --border-strong: #303640;
+  --border-focus: var(--accent);
+
+  /* ---- Diff / code colors ---- */
+  --code-bg: #0e1014;
+  --code-gutter: #14171d;
+  --code-line-highlight: rgba(255, 181, 46, 0.12);
+  --diff-del-bg: rgba(255, 119, 119, 0.12);
+  --diff-del-text: #ff9d9d;
+  --diff-add-bg: rgba(84, 214, 176, 0.12);
+  --diff-add-text: #7ee3c4;
+
+  /* ---- Spacing scale ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+
+  /* ---- Radii (square, technical) ---- */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-pill: 2px;
+
+  /* ---- Shadows ---- */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6);
+  --shadow-focus: 0 0 0 1px var(--accent);
+
+  /* ---- Typography ---- */
+  --font-sans: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+  --font-mono: 'Courier New', ui-monospace, SFMono-Regular, Menlo, Consolas,
+    'Liberation Mono', monospace;
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-base: 14px;
+  --fs-md: 15px;
+  --fs-lg: 18px;
+  --fs-xl: 22px;
+  --fs-2xl: 28px;
+  --lh-tight: 1.25;
+  --lh-base: 1.55;
+  --tracking-wide: 2px;
+
+  /* ---- Layout ---- */
+  --sidebar-w: 248px;
+  --topbar-h: 36px;
+  --page-pad: var(--space-6);
+  --z-sidebar: 40;
+  --z-topbar: 30;
+  --z-dropdown: 60;
+  --z-modal: 80;
+  --z-toast: 100;
+
+  /* ---- Motion ---- */
+  --transition: 160ms cubic-bezier(0.4, 0, 0.2, 1);
+}
