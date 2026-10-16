@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useProject } from '../../context/ProjectContext';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 import { errorMessage, errorHint } from '../../utils/errors';
 import { shortId } from '../../utils/format';
 
@@ -66,6 +67,7 @@ export default function Topbar({ terminal = null, onReloadFile = null }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const toast = useToast();
+  const { user, logout } = useAuth();
   const {
     activeProject,
     projectHistory,
@@ -141,9 +143,18 @@ export default function Topbar({ terminal = null, onReloadFile = null }) {
     setOpenMenu(null);
   }, [activeProject, currentFile, toast]);
 
+  const handleLogout = useCallback(async () => {
+    setOpenMenu(null);
+    await logout();
+    toast.info('Signed out');
+    navigate('/login', { replace: true });
+  }, [logout, navigate, toast]);
+
+  const accountLabel = (user?.full_name || user?.email || 'ACCOUNT').toUpperCase();
+
   return (
-    <header className="ws-topbar">
-      <nav className="ws-menu-left" aria-label="Application menu" ref={menuRef}>
+    <header className="ws-topbar" ref={menuRef}>
+      <nav className="ws-menu-left" aria-label="Application menu">
         <Link to="/" className="ws-brand" aria-label="RefactorAI dashboard">
           REFACTORAI
         </Link>
@@ -236,6 +247,12 @@ export default function Topbar({ terminal = null, onReloadFile = null }) {
         <span className="ws-git-badge" title="The backend exposes no git integration">
           ▯ no-git
         </span>
+        <Menu id="account" openId={openMenu} setOpenId={setOpenMenu} label={accountLabel} align="right">
+          {user?.full_name ? <div className="ws-menu-label">{user.full_name}</div> : null}
+          <MenuItem label={user?.email || 'Signed in'} disabled />
+          <MenuSep />
+          <MenuItem label="SIGN OUT" hint="logout" onClick={handleLogout} />
+        </Menu>
       </div>
     </header>
   );

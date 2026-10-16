@@ -3,14 +3,18 @@ import json
 import os
 import re
 import fnmatch
+import secrets
 from dotenv import load_dotenv
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
-from fastapi import FastAPI, HTTPException
+import bcrypt
+import jwt
+from fastapi import FastAPI, HTTPException, Depends, Request, Response, Cookie
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pydantic import BaseModel, EmailStr, field_validator
 
 from modules.sqlite_io import SQLiteDB
 from modules.file_io import read_file_content, replace_file_content, write_file_content
@@ -42,7 +46,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_origin_regex=ALLOWED_ORIGIN_REGEX,
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -50,6 +54,57 @@ app.add_middleware(
 BASE_DIR = Path(__file__).resolve().parent
 CENTRAL_DB_PATH = BASE_DIR / "data" / ".airefactor_central.db"
 STATE_FILE = BASE_DIR / ".state.json"
+
+
+@app.get(
+    "/health",
+    summary="Health check",
+    description=(
+        "Lightweight liveness probe used by tooling and manual checks. "
+        "Always unauthenticated and does not touch the database."
+    ),
+    status_code=200,
+    responses={200: {"description": "Service is up"}},
+)
+def health():
+    return {"status": "ok"}
+
+# Auth config
+JWT_SECRET = os.environ.get("JWT_SECRET") or secrets.token_urlsafe(32)
+JWT_ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.environ.get("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+PASSWORD_RESET_EXPIRE_MINUTES = int(os.environ.get("PASSWORD_RESET_EXPIRE_MINUTES", "30"))
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+PASSWORD_RESET_FRONTEND_URL = os.environ.get("PASSWORD_RESET_FRONTEND_URL", FRONTEND_URL)
+
+security = HTTPBearer(auto_error=False)
+
+
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Dependency: validate the JWT access token and return the active user row."""
+    _ensure_central_db()
+    if credentials is None:
+        raise HTTPException(status_code=401, detail="Missing authentication credentials")
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    db = SQLiteDB(str(CENTRAL_DB_PATH))
+    err, rows = db.read(
+        "users",
+        "SELECT * FROM {table} WHERE user_id = ? AND is_active = 1",
+        params=(user_id,),
+    )
+    if err or not rows:
+        raise HTTPException(status_code=401, detail="User not found or inactive")
+    return rows[0]
 
 EXTENSIONS_TO_EXCLUDE = {".pyc", ".pyo", ".pyd", ".so", ".dll", ".exe", ".bin"}
 
@@ -65,6 +120,42 @@ def _ensure_central_db():
             createdby TEXT NOT NULL,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )"""
+    )
+    db.runQuery(
+        """CREATE TABLE IF NOT EXISTS users (
+            user_id TEXT PRIMARY KEY,
+            full_name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT,
+            oauth_provider TEXT,
+            oauth_provider_id TEXT,
+            is_active INTEGER NOT NULL DEFAULT 1,
+            is_admin INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )"""
+    )
+    db.runQuery(
+        """CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            token_hash TEXT NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            used INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(user_id)
+        )"""
+    )
+    db.runQuery(
+        """CREATE TABLE IF NOT EXISTS refresh_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            token_hash TEXT NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            revoked INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(user_id)
         )"""
     )
 
@@ -578,8 +669,10 @@ class OpenProjectResponse(BaseModel):
     ),
     response_model=OpenProjectResponse,
     status_code=200,
+    dependencies=[Depends(get_current_user)],
     responses={
         400: {"description": "Invalid folder_path or missing required parameter"},
+        401: {"description": "Not authenticated"},
         500: {"description": "Internal database error"},
     },
 )
@@ -716,6 +809,7 @@ class ReadFileResponse(BaseModel):
     ),
     response_model=ReadFileResponse,
     status_code=200,
+    dependencies=[Depends(get_current_user)],
     responses={
         400: {"description": "No active project in .state.json"},
         404: {"description": "File not found"},
@@ -774,6 +868,7 @@ class WriteFileResponse(BaseModel):
     ),
     response_model=WriteFileResponse,
     status_code=200,
+    dependencies=[Depends(get_current_user)],
     responses={
         400: {"description": "Missing filename or project mismatch / path escapes the project"},
         404: {"description": "File not found"},
@@ -836,6 +931,7 @@ class ValidateProjectPathResponse(BaseModel):
     ),
     response_model=ValidateProjectPathResponse,
     status_code=200,
+    dependencies=[Depends(get_current_user)],
     responses={
         400: {"description": "Invalid or empty folder_path"},
         500: {"description": "Database read error"},
@@ -901,6 +997,7 @@ class DetectContextResponse(BaseModel):
     ),
     response_model=DetectContextResponse,
     status_code=200,
+    dependencies=[Depends(get_current_user)],
     responses={400: {"description": "folder_path is required"}},
 )
 def detect_project_context(req: DetectContextRequest):
@@ -936,6 +1033,7 @@ class ListProjectsResponse(BaseModel):
     ),
     response_model=ListProjectsResponse,
     status_code=200,
+    dependencies=[Depends(get_current_user)],
     responses={500: {"description": "Database read error"}},
 )
 def list_projects():
@@ -971,6 +1069,7 @@ class DeleteProjectResponse(BaseModel):
     ),
     response_model=DeleteProjectResponse,
     status_code=200,
+    dependencies=[Depends(get_current_user)],
     responses={
         400: {"description": "project_id is required"},
         404: {"description": "Project not found in central DB"},
@@ -1159,6 +1258,7 @@ def _run_agent_flow(project_id: str, filename: str, agent_name: str, project_con
     ),
     response_model=RefactorResponse,
     status_code=200,
+    dependencies=[Depends(get_current_user)],
     responses={
         400: {"description": "Invalid agent_id or active project mismatch"},
         404: {"description": "Project or file not found"},
@@ -1353,6 +1453,7 @@ def _get_pending_suggestions_by_batch(
     ),
     response_model=AcceptSuggestionResponse,
     status_code=200,
+    dependencies=[Depends(get_current_user)],
     responses={
         400: {"description": "Invalid request or suggestion not pending"},
         404: {"description": "Project, file, or suggestion not found"},
@@ -1454,6 +1555,429 @@ def accept_suggestion(req: AcceptSuggestionRequest):
         "remaining_suggestions": remaining,
         "message": message,
     }
+
+
+# --------------------------------------------------------------------------- #
+# Authentication
+# --------------------------------------------------------------------------- #
+
+def _hash_password(password: str) -> str:
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+
+
+def _verify_password(password: str, password_hash: str) -> bool:
+    try:
+        return bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8'))
+    except Exception:
+        return False
+
+
+def _create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire, "iat": datetime.now(timezone.utc)})
+    return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+def _create_refresh_token() -> str:
+    return secrets.token_urlsafe(64)
+
+
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode('utf-8')).hexdigest()
+
+
+# Auth models
+class SignupRequest(BaseModel):
+    full_name: str
+    email: EmailStr
+    password: str
+
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters')
+        return v
+
+    @field_validator('full_name')
+    @classmethod
+    def validate_name(cls, v):
+        if not v or len(v.strip()) < 1:
+            raise ValueError('Full name is required')
+        return v.strip()
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+    remember_me: Optional[bool] = False
+
+
+class AuthResponse(BaseModel):
+    user: dict
+    access_token: str
+    token_type: str = "bearer"
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: Optional[str] = None
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
+
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters')
+        return v
+
+
+class GoogleOAuthRequest(BaseModel):
+    id_token: Optional[str] = None
+    credential: Optional[str] = None
+    code: Optional[str] = None
+
+
+# ----- Simple in-memory rate limiter for auth endpoints -----
+_AUTH_RATE_LIMIT = 60  # max requests
+_AUTH_RATE_WINDOW_SECONDS = 300  # 5 minutes
+_auth_attempts: dict = {}
+
+
+def _rate_limit(request: Request, key: str):
+    """Sliding-window in-memory rate limit. key = identifier (e.g. email or IP)."""
+    import time
+    now = time.time()
+    bucket_key = f"{key}:{request.client.host if request.client else 'unknown'}"
+    attempts = _auth_attempts.get(bucket_key, [])
+    attempts = [t for t in attempts if now - t < _AUTH_RATE_WINDOW_SECONDS]
+    if len(attempts) >= _AUTH_RATE_LIMIT:
+        raise HTTPException(status_code=429, detail="Too many attempts. Please try again later.")
+    attempts.append(now)
+    _auth_attempts[bucket_key] = attempts
+
+
+def _public_user(user: dict) -> dict:
+    return {
+        "user_id": user["user_id"],
+        "full_name": user.get("full_name", ""),
+        "email": user.get("email", ""),
+        "is_admin": user.get("is_admin", 0),
+    }
+
+
+def _store_refresh_token(db: SQLiteDB, user_id: str, token: str, remember: bool = False):
+    token_hash = _hash_token(token)
+    days = REFRESH_TOKEN_EXPIRE_DAYS if remember else 1
+    expires_at = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
+    err, _ = db.runQuery(
+        "INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)",
+        table_name="refresh_tokens",
+        params=(user_id, token_hash, expires_at),
+    )
+    if err:
+        raise HTTPException(status_code=500, detail="Failed to create session")
+    return expires_at
+
+
+def _revoke_refresh_token(db: SQLiteDB, token: str) -> bool:
+    token_hash = _hash_token(token)
+    err, _ = db.runQuery(
+        "UPDATE refresh_tokens SET revoked = 1 WHERE token_hash = ?",
+        table_name="refresh_tokens",
+        params=(token_hash,),
+    )
+    return not err
+
+
+def _revoke_all_user_sessions(db: SQLiteDB, user_id: str):
+    db.runQuery(
+        "UPDATE refresh_tokens SET revoked = 1 WHERE user_id = ?",
+        table_name="refresh_tokens",
+        params=(user_id,),
+    )
+
+
+def _set_refresh_cookie(response: Response, token: str, remember: bool = False):
+    max_age = REFRESH_TOKEN_EXPIRE_DAYS * 86400 if remember else 86400
+    secure = os.environ.get("COOKIE_SECURE", "false").lower() == "true"
+    samesite = os.environ.get("COOKIE_SAMESITE", "lax").lower()
+    response.set_cookie(
+        key="refresh_token",
+        value=token,
+        max_age=max_age,
+        httponly=True,
+        secure=secure,
+        samesite=samesite,
+        path="/auth",
+    )
+
+
+def _clear_refresh_cookie(response: Response):
+    secure = os.environ.get("COOKIE_SECURE", "false").lower() == "true"
+    samesite = os.environ.get("COOKIE_SAMESITE", "lax").lower()
+    response.delete_cookie(
+        key="refresh_token",
+        path="/auth",
+        httponly=True,
+        secure=secure,
+        samesite=samesite,
+    )
+
+
+def _issue_tokens(response: Response, user: dict, remember: bool = False) -> dict:
+    _ensure_central_db()
+    db = SQLiteDB(str(CENTRAL_DB_PATH))
+    access_token = _create_access_token({"sub": user["user_id"]})
+    refresh_token = _create_refresh_token()
+    _store_refresh_token(db, user["user_id"], refresh_token, remember=remember)
+    _set_refresh_cookie(response, refresh_token, remember=remember)
+    return {
+        "user": _public_user(user),
+        "access_token": access_token,
+        "token_type": "bearer",
+    }
+
+
+# Auth endpoints
+@app.post("/auth/signup")
+def signup(req: SignupRequest, response: Response, request: Request):
+    _rate_limit(request, req.email.lower())
+    _ensure_central_db()
+    db = SQLiteDB(str(CENTRAL_DB_PATH))
+    email = req.email.lower().strip()
+    err, rows = db.read("users", "SELECT * FROM {table} WHERE LOWER(email) = ?", params=(email,))
+    if not err and rows:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    user_id = secrets.token_urlsafe(16)
+    password_hash = _hash_password(req.password)
+    err, _ = db.runQuery(
+        "INSERT INTO {table} (user_id, full_name, email, password_hash) VALUES (?, ?, ?, ?)",
+        table_name="users",
+        params=(user_id, req.full_name.strip(), email, password_hash),
+    )
+    if err:
+        raise HTTPException(status_code=500, detail="Failed to create user")
+    user = {
+        "user_id": user_id,
+        "full_name": req.full_name.strip(),
+        "email": email,
+        "is_admin": 0,
+    }
+    return _issue_tokens(response, user)
+
+
+@app.post("/auth/login")
+def login(req: LoginRequest, response: Response, request: Request):
+    _rate_limit(request, req.email.lower())
+    _ensure_central_db()
+    db = SQLiteDB(str(CENTRAL_DB_PATH))
+    email = req.email.lower().strip()
+    err, rows = db.read("users", "SELECT * FROM {table} WHERE LOWER(email) = ?", params=(email,))
+    if err or not rows:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    user = rows[0]
+    if not user.get("password_hash"):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if not _verify_password(req.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if not user.get("is_active", 1):
+        raise HTTPException(status_code=401, detail="Account is disabled")
+    return _issue_tokens(response, user, remember=bool(req.remember_me))
+
+
+@app.post("/auth/refresh")
+def refresh(req: RefreshRequest, response: Response, request: Request):
+    _rate_limit(request, request.client.host if request.client else "unknown")
+    _ensure_central_db()
+    db = SQLiteDB(str(CENTRAL_DB_PATH))
+    token = req.refresh_token
+    if not token:
+        token = request.cookies.get("refresh_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing refresh token")
+    token_hash = _hash_token(token)
+    err, rows = db.read(
+        "refresh_tokens",
+        "SELECT * FROM {table} WHERE token_hash = ? AND revoked = 0",
+        params=(token_hash,),
+    )
+    if err or not rows:
+        raise HTTPException(status_code=401, detail="Invalid or revoked refresh token")
+    row = rows[0]
+    try:
+        expires_at = datetime.fromisoformat(row["expires_at"].replace('Z', '+00:00'))
+    except Exception:
+        expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) > expires_at:
+        raise HTTPException(status_code=401, detail="Refresh token expired")
+    # Rotate: revoke the used token, issue a new one
+    _revoke_refresh_token(db, token)
+    err, user_rows = db.read(
+        "users",
+        "SELECT * FROM {table} WHERE user_id = ? AND is_active = 1",
+        params=(row["user_id"],),
+    )
+    if err or not user_rows:
+        raise HTTPException(status_code=401, detail="User not found or inactive")
+    user = user_rows[0]
+    return _issue_tokens(response, user)
+
+
+@app.get("/auth/me")
+def get_me(current_user: dict = Depends(get_current_user)):
+    return {"user": _public_user(current_user)}
+
+
+@app.post("/auth/forgot-password")
+def forgot_password(req: ForgotPasswordRequest, request: Request):
+    _rate_limit(request, req.email.lower())
+    _ensure_central_db()
+    db = SQLiteDB(str(CENTRAL_DB_PATH))
+    email = req.email.lower().strip()
+    err, rows = db.read("users", "SELECT * FROM {table} WHERE LOWER(email) = ?", params=(email,))
+    if err or not rows:
+        return {"message": "If an account with that email exists, a reset link has been sent."}
+    user = rows[0]
+    token = secrets.token_urlsafe(32)
+    token_hash = _hash_token(token)
+    expires_at = (datetime.now(timezone.utc) + timedelta(minutes=PASSWORD_RESET_EXPIRE_MINUTES)).isoformat()
+    err, _ = db.runQuery(
+        "INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)",
+        table_name="password_reset_tokens",
+        params=(user["user_id"], token_hash, expires_at),
+    )
+    if err:
+        raise HTTPException(status_code=500, detail="Failed to process request")
+    # In production, send email via configured provider. For development, log the link.
+    reset_url = f"{PASSWORD_RESET_FRONTEND_URL}/reset-password?token={token}"
+    print(f"[PASSWORD RESET] {email} -> {reset_url}")
+    return {"message": "If an account with that email exists, a reset link has been sent."}
+
+
+@app.post("/auth/reset-password")
+def reset_password(req: ResetPasswordRequest, request: Request):
+    _rate_limit(request, request.client.host if request.client else "unknown")
+    _ensure_central_db()
+    db = SQLiteDB(str(CENTRAL_DB_PATH))
+    token_hash = _hash_token(req.token)
+    err, rows = db.read(
+        "password_reset_tokens",
+        "SELECT * FROM {table} WHERE token_hash = ? AND used = 0 ORDER BY id DESC LIMIT 1",
+        params=(token_hash,),
+    )
+    if err or not rows:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+    token_row = rows[0]
+    try:
+        expires_at = datetime.fromisoformat(token_row["expires_at"].replace('Z', '+00:00'))
+    except Exception:
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=-1)
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) > expires_at:
+        raise HTTPException(status_code=400, detail="Token has expired")
+    password_hash = _hash_password(req.password)
+    err, _ = db.runQuery(
+        "UPDATE users SET password_hash = ? WHERE user_id = ?",
+        table_name="users",
+        params=(password_hash, token_row["user_id"]),
+    )
+    if err:
+        raise HTTPException(status_code=500, detail="Failed to reset password")
+    err, _ = db.runQuery(
+        "UPDATE password_reset_tokens SET used = 1 WHERE id = ?",
+        table_name="password_reset_tokens",
+        params=(token_row["id"],),
+    )
+    # Invalidate existing sessions after a password reset
+    _revoke_all_user_sessions(db, token_row["user_id"])
+    return {"message": "Password reset successfully"}
+
+
+@app.post("/auth/logout")
+def logout(response: Response, request: Request, current_user: dict = Depends(get_current_user)):
+    token = request.cookies.get("refresh_token")
+    if token:
+        _ensure_central_db()
+        db = SQLiteDB(str(CENTRAL_DB_PATH))
+        _revoke_refresh_token(db, token)
+    _clear_refresh_cookie(response)
+    return {"message": "Logged out successfully"}
+
+
+@app.post("/auth/google")
+def google_oauth(req: GoogleOAuthRequest, response: Response, request: Request):
+    _rate_limit(request, request.client.host if request.client else "unknown")
+    _ensure_central_db()
+    client_id = os.environ.get("GOOGLE_CLIENT_ID")
+    credential = req.id_token or req.credential
+    if not credential:
+        raise HTTPException(status_code=400, detail="Missing Google credential")
+    if not client_id:
+        raise HTTPException(status_code=503, detail="Google OAuth is not configured")
+    try:
+        from google.oauth2 import id_token as google_id_token
+        from google.auth.transport import requests as google_requests
+        info = google_id_token.verify_oauth2_token(
+            credential, google_requests.Request(), audience=client_id
+        )
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid Google credentials")
+    if not info or info.get("email_verified") is not True:
+        raise HTTPException(status_code=401, detail="Google email not verified")
+    email = info.get("email", "").lower().strip()
+    if not email:
+        raise HTTPException(status_code=401, detail="Google account has no email")
+    name = info.get("name") or email.split("@")[0]
+    provider_id = info.get("sub")
+    db = SQLiteDB(str(CENTRAL_DB_PATH))
+    err, rows = db.read("users", "SELECT * FROM {table} WHERE LOWER(email) = ?", params=(email,))
+    if err:
+        raise HTTPException(status_code=500, detail="Database error")
+    if rows:
+        user = rows[0]
+        # Link OAuth identity if not already linked (avoid takeover: only link
+        # when no conflicting provider identity exists for a different user)
+        if not user.get("oauth_provider"):
+            db.runQuery(
+                "UPDATE users SET oauth_provider = 'google', oauth_provider_id = ? WHERE user_id = ?",
+                table_name="users",
+                params=(provider_id, user["user_id"]),
+            )
+    else:
+        user_id = secrets.token_urlsafe(16)
+        err, _ = db.runQuery(
+            "INSERT INTO {table} (user_id, full_name, email, password_hash, oauth_provider, oauth_provider_id) "
+            "VALUES (?, ?, ?, NULL, 'google', ?)",
+            table_name="users",
+            params=(user_id, name, email, provider_id),
+        )
+        if err:
+            raise HTTPException(status_code=500, detail="Failed to create user")
+        user = {
+            "user_id": user_id,
+            "full_name": name,
+            "email": email,
+            "is_admin": 0,
+        }
+    if not user.get("is_active", 1):
+        raise HTTPException(status_code=401, detail="Account is disabled")
+    return _issue_tokens(response, user, remember=True)
 
 
 if __name__ == "__main__":

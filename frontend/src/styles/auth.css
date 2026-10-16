@@ -1,0 +1,388 @@
+/* ==========================================================================
+   Authentication screens
+   Login / Signup / Forgot / Reset.
+
+   Matches the RefactorAI dark IDE aesthetic: near-black backdrop, panel card,
+   amber accent, mono technical headings, sans-serif body, square corners.
+   ========================================================================== */
+
+/* --------------------------------------------------------------- Layout */
+
+.auth {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-7) var(--space-4);
+  background: var(--bg);
+  /* Subtle grid + radial glow so the page reads as part of the IDE. */
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(255, 181, 46, 0.06), transparent 55%),
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+  background-size: auto, 28px 28px, 28px 28px;
+}
+
+.auth__panel {
+  width: 100%;
+  max-width: 430px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-7) var(--space-6) var(--space-6);
+}
+
+.auth__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.auth__logo {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--accent);
+  padding: 3px 7px;
+  border: 1px solid var(--accent-soft-border);
+  background: var(--accent-soft);
+  line-height: 1;
+}
+
+.auth__brand-name {
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.auth__header {
+  margin-bottom: var(--space-6);
+}
+
+.auth__title {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  line-height: var(--lh-tight);
+}
+
+.auth__subtitle {
+  margin-top: var(--space-2);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+  color: var(--text-muted);
+}
+
+.auth__footer {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.auth__switch {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.auth__switch a,
+.auth-link {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+.auth__switch a:hover,
+.auth-link:hover {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+
+.auth__note {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+/* ---------------------------------------------------------------- Form */
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.auth-form .field__label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Inputs sit on the page background for contrast against the panel. */
+.auth-form .input {
+  background: var(--bg);
+  border-color: var(--border);
+  min-height: 42px;
+}
+
+.auth-form .input:hover {
+  border-color: var(--border-strong);
+}
+
+.auth-form .input:focus {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-focus);
+}
+
+.auth-form__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: calc(var(--space-1) * -1);
+}
+
+.auth-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--text-body);
+  cursor: pointer;
+  user-select: none;
+}
+
+.auth-checkbox input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.auth-checkbox--terms {
+  align-items: flex-start;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-base);
+}
+
+.auth-checkbox--terms input {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* -------------------------------------------------------- Password input */
+
+.password-input {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.password-input .input {
+  padding-right: 42px;
+}
+
+.password-input__toggle {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  width: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--transition), background var(--transition);
+}
+
+.password-input__toggle:hover {
+  color: var(--text);
+  background: var(--bg-subtle);
+}
+
+.password-input__toggle:focus-visible {
+  outline: none;
+  color: var(--accent);
+}
+
+/* -------------------------------------------------------- Password meter */
+
+.password-meter {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: calc(var(--space-1) * -1);
+}
+
+.password-meter__bars {
+  display: flex;
+  gap: 4px;
+}
+
+.password-meter__bar {
+  flex: 1;
+  height: 3px;
+  background: var(--border);
+  transition: background var(--transition);
+}
+
+.password-meter__bar.is-on[data-score='1'] {
+  background: var(--danger);
+}
+.password-meter__bar.is-on[data-score='2'] {
+  background: var(--warning);
+}
+.password-meter__bar.is-on[data-score='3'] {
+  background: var(--info);
+}
+.password-meter__bar.is-on[data-score='4'] {
+  background: var(--success);
+}
+
+.password-meter__label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.password-meter__rules {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  padding: 0;
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+
+.password-meter__rules li.is-ok {
+  color: var(--success);
+}
+
+/* ------------------------------------------------------- Google button */
+
+.google-btn {
+  gap: var(--space-2);
+}
+
+.google-btn svg {
+  flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------- Success state */
+
+.auth-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+  color: var(--success);
+  padding: var(--space-2) 0;
+}
+
+.auth-success h2 {
+  font-family: var(--font-mono);
+  font-size: var(--fs-lg);
+  color: var(--text);
+}
+
+.auth-success p {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  line-height: var(--lh-base);
+}
+
+.auth-success .btn {
+  margin-top: var(--space-2);
+}
+
+/* ----------------------------------------------------------- Loading */
+
+.auth-loading {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  background: var(--bg);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.06em;
+}
+
+/* Shared spinner (used by Button + GoogleSignInButton + AuthLoading). */
+.btn-spinner {
+  animation: auth-spin 0.7s linear infinite;
+}
+
+@keyframes auth-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-spinner {
+    animation-duration: 1.6s;
+  }
+}
+
+/* ----------------------------------------------------------- Responsive */
+
+@media (max-width: 520px) {
+  .auth {
+    padding: var(--space-5) var(--space-3);
+    align-items: flex-start;
+  }
+
+  .auth__panel {
+    padding: var(--space-6) var(--space-4) var(--space-5);
+    max-width: 100%;
+  }
+
+  .auth__title {
+    font-size: var(--fs-lg);
+  }
+
+  .auth-form__row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+}

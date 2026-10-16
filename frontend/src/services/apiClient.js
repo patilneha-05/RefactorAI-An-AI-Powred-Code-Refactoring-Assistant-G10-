@@ -9,6 +9,68 @@ export const API_BASE_URL = String(
 
 const DEFAULT_TIMEOUT_MS = 30000;
 
+// ---------------------------------------------------------------------------
+// Access-token handling.
+//
+// The short-lived access token lives in memory (never localStorage). The
+// long-lived refresh token is an HttpOnly cookie scoped to /auth, so the
+// browser sends it automatically when `withCredentials` is set. On a 401 the
+// client attempts exactly one silent refresh and retries the original request.
+// ---------------------------------------------------------------------------
+
+let accessToken = null;
+const sessionExpiredListeners = new Set();
+
+/** Set the in-memory access token (call with null to clear). */
+export function setAccessToken(token) {
+  accessToken = token || null;
+}
+
+/** Current in-memory access token, if any. */
+export function getAccessToken() {
+  return accessToken;
+}
+
+/**
+ * Subscribe to session-expiry notifications (fired when a silent refresh
+ * fails). Returns an unsubscribe function.
+ */
+export function onSessionExpired(listener) {
+  sessionExpiredListeners.add(listener);
+  return () => sessionExpiredListeners.delete(listener);
+}
+
+function emitSessionExpired() {
+  sessionExpiredListeners.forEach((listener) => {
+    try {
+      listener();
+    } catch {
+      /* listener errors must not break request flow */
+    }
+  });
+}
+
+/** Endpoints whose 401 must NOT trigger a silent refresh (avoid loops). */
+const NO_REFRESH_PATHS = new Set([
+  '/auth/login',
+  '/auth/signup',
+  '/auth/refresh',
+  '/auth/logout',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/google',
+]);
+
+/** Endpoints that must not carry a stale Authorization header. */
+const NO_AUTH_HEADER_PATHS = new Set([
+  '/auth/login',
+  '/auth/signup',
+  '/auth/refresh',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/google',
+]);
+
 /** Normalized error for every API failure. */
 export class ApiError extends Error {
   constructor(message, { status = 0, code = '', details = null } = {}) {
@@ -78,15 +140,68 @@ function normalizeError(error) {
   return new ApiError(error?.message || 'Unexpected request error.', { code: 'UNKNOWN' });
 }
 
+/**
+ * Attempt one silent refresh using the HttpOnly refresh cookie.
+ * Resolves to true when a new access token was obtained.
+ */
+let refreshPromise = null;
+async function trySilentRefresh() {
+  if (!refreshPromise) {
+    refreshPromise = axios
+      .request({
+        method: 'POST',
+        url: '/auth/refresh',
+        baseURL: API_BASE_URL,
+        data: {},
+        withCredentials: true,
+        timeout: 15000,
+        headers: { 'Content-Type': 'application/json' },
+      })
+      .then((response) => {
+        const token = response?.data?.access_token;
+        if (token) {
+          setAccessToken(token);
+          return true;
+        }
+        return false;
+      })
+      .catch(() => false)
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise;
+}
+
 async function request(config) {
+  const isAuthPath = NO_REFRESH_PATHS.has(config.url);
+  const cfg = {
+    timeout: DEFAULT_TIMEOUT_MS,
+    withCredentials: true, // send the HttpOnly refresh cookie where relevant
+    ...config,
+    baseURL: API_BASE_URL,
+  };
+  const headers = { ...(cfg.headers || {}) };
+  if (accessToken && !NO_AUTH_HEADER_PATHS.has(config.url)) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+  cfg.headers = headers;
+
   try {
-    const response = await axios.request({
-      timeout: DEFAULT_TIMEOUT_MS,
-      ...config,
-      baseURL: API_BASE_URL,
-    });
+    const response = await axios.request(cfg);
     return response.data;
   } catch (error) {
+    const status = error?.response?.status;
+    const canRetry = status === 401 && !isAuthPath && !cfg._retried;
+    if (canRetry) {
+      const refreshed = await trySilentRefresh();
+      if (refreshed) {
+        return request({ ...cfg, _retried: true });
+      }
+      // Refresh failed — the session is genuinely over.
+      setAccessToken(null);
+      emitSessionExpired();
+    }
     throw normalizeError(error);
   }
 }

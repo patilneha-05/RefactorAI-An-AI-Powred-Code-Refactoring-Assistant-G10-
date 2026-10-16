@@ -1,26 +1,25 @@
-import { Spinner } from './Loader';
+import { Loader2 } from 'lucide-react';
 
 /**
- * Primary interactive element.
- * variant: primary | secondary | ghost | danger | danger-solid
- * size:    sm | md | lg
+ * Button that reuses the design system's `.btn` classes and adds a loading
+ * state. While `loading` the button is disabled so a double submit cannot
+ * fire a second request.
  */
 export default function Button({
-  variant = 'secondary',
-  size = 'md',
+  variant = 'primary',
+  size = '',
+  block = false,
   loading = false,
   disabled = false,
-  icon: Icon = null,
-  block = false,
+  type = 'button',
   className = '',
   children,
-  type = 'button',
   ...rest
 }) {
   const classes = [
     'btn',
-    `btn--${variant}`,
-    size !== 'md' ? `btn--${size}` : '',
+    variant ? `btn--${variant}` : '',
+    size ? `btn--${size}` : '',
     block ? 'btn--block' : '',
     className,
   ]
@@ -35,11 +34,7 @@ export default function Button({
       aria-busy={loading || undefined}
       {...rest}
     >
-      {loading ? (
-        <Spinner size={size === 'sm' ? 13 : 15} />
-      ) : Icon ? (
-        <Icon size={size === 'sm' ? 14 : 16} aria-hidden="true" />
-      ) : null}
+      {loading ? <Loader2 size={16} className="btn-spinner" aria-hidden="true" /> : null}
       {children}
     </button>
   );

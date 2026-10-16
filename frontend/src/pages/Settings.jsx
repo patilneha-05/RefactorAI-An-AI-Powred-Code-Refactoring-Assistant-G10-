@@ -8,7 +8,6 @@ const SECTIONS = [
   { id: 'agents', label: 'AGENT PIPELINE' },
   { id: 'ports', label: 'PORT FORWARDING' },
   { id: 'team', label: 'TEAM & COLLABORATION' },
-  { id: 'profile', label: 'PROFILE' },
 ];
 
 /**
@@ -25,7 +24,6 @@ export default function Settings() {
   const { isEnabled, setEnabled } = useAgentSettings();
   const [agentStatus, setAgentStatus] = useState('');
   const [portsNotice, setPortsNotice] = useState('');
-  const [profileNotice, setProfileNotice] = useState('');
 
   const toggleAgent = (agent, checked) => {
     setEnabled(agent.key, checked);
@@ -192,35 +190,6 @@ export default function Settings() {
                 <div className="stg-secondary-card">
                   <h2>Collaboration</h2>
                   <p>Team management features depend on your backend implementation.</p>
-                </div>
-              </section>
-            ) : null}
-
-            {section === 'profile' ? (
-              <section className="stg-section">
-                <h1 className="stg-page-title">PROFILE</h1>
-                <p className="stg-page-description">View and manage your user profile.</p>
-
-                <div className="stg-secondary-card">
-                  <h2>Account details</h2>
-                  <div className="stg-field">
-                    <label>DISPLAY NAME</label>
-                    <input placeholder="Your name" />
-                  </div>
-                  <div className="stg-field">
-                    <label>EMAIL ADDRESS</label>
-                    <input type="email" placeholder="you@example.com" />
-                  </div>
-                  <button
-                    type="button"
-                    className="stg-save-button"
-                    onClick={() => setProfileNotice('Connect this form to your profile API.')}
-                  >
-                    SAVE PROFILE
-                  </button>
-                  <p className="stg-notice" role="status">
-                    {profileNotice}
-                  </p>
                 </div>
               </section>
             ) : null}

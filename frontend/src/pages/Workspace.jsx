@@ -295,6 +295,7 @@ export default function Workspace() {
   const draftRef = useRef('');
   const lastFileKeyRef = useRef('');
   const lastServerTextRef = useRef('');
+  const didInitialReloadRef = useRef(false);
 
   // ---- resizable panes ----
   const workspaceRef = useRef(null);
@@ -339,6 +340,22 @@ export default function Workspace() {
     }
     lastServerTextRef.current = serverText;
   }, [currentFile, fileKey, serverText]);
+
+  // The open file is cached in ProjectContext (and localStorage) so it survives
+  // navigation. Re-read it from the backend once when the workspace opens so the
+  // editor always shows the file as it exists on disk — e.g. after a suggestion
+  // was accepted elsewhere (the Suggestions page) and the cached copy is stale.
+  useEffect(() => {
+    if (didInitialReloadRef.current) return;
+    didInitialReloadRef.current = true;
+    const projectId = activeProject?.project_id;
+    if (!currentFile) return;
+    if (projectId && currentFile.project_id && currentFile.project_id !== projectId) return;
+    refreshFile();
+    // Intentionally runs once on mount — currentFile/refreshFile are read from
+    // the first render, which is exactly the cached copy we want to verify.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Persist pane widths between sessions.
   useEffect(() => {
